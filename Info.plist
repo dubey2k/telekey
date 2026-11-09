@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key><string>Telekey</string>
+	<key>CFBundleIdentifier</key><string>io.github.dubey2k.telekey</string>
+	<key>CFBundleName</key><string>Telekey</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>@VERSION@</string>
+	<key>CFBundleVersion</key><string>@VERSION@</string>
+	<key>ScrcpyVersion</key><string>@SCRCPY@</string>
+	<key>LSMinimumSystemVersion</key><string>14.0</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>NSLocalNetworkUsageDescription</key><string>Telekey finds and controls Android TVs on your Wi-Fi.</string>
+	<key>NSBonjourServices</key>
+	<array><string>_adb._tcp</string><string>_adb-tls-connect._tcp</string><string>_adb-tls-pairing._tcp</string><string>_googlecast._tcp</string></array>
+</dict>
+</plist>
