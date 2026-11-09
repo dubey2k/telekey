@@ -1,8 +1,6 @@
 import SwiftUI
 
-// MARK: - UI
-// Design: an instrument panel. Flat graphite surfaces, hairline edges, one signal-orange accent (a standby LED),
-// condensed headings, monospaced legends for anything technical (keys, IPs, sizes). No glass, no glow, no depth.
+// Flat graphite panels, hairline edges, one orange accent. Monospace for anything technical.
 
 extension Color {
     init(hex: UInt32) {
@@ -28,7 +26,6 @@ extension Font {
 }
 
 extension View {
-    /// A flat panel: solid fill, hairline edge.
     func plate(_ fill: Color = Theme.surface, radius: CGFloat = 10) -> some View {
         background(RoundedRectangle(cornerRadius: radius).fill(fill))
             .overlay(RoundedRectangle(cornerRadius: radius).strokeBorder(Theme.line, lineWidth: 1))
@@ -79,7 +76,7 @@ extension ButtonStyle where Self == Flat {
     static var danger: Flat { Flat(kind: .danger) }
 }
 
-/// A shortcut legend, drawn like the printing on a hardware key.
+/// A shortcut legend, like the printing on a key.
 struct Keycap: View {
     let key: String
     var body: some View {
@@ -97,7 +94,6 @@ struct Eyebrow: View {
     }
 }
 
-/// A one-line message with a coloured edge, and an optional action on the right.
 struct Notice<Action: View>: View {
     let text: String
     var tone = Theme.accent
@@ -120,7 +116,7 @@ struct Page<Content: View>: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) { content }
-                .frame(maxWidth: 560)  // stays readable when the window is maximised
+                .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 20)
                 .padding(.top, 38)
@@ -150,7 +146,6 @@ struct Header<Trailing: View>: View {
     }
 }
 
-/// Stacks rows inside one plate with hairlines between them.
 struct Rows<Item: Identifiable, Row: View>: View {
     let items: [Item]
     @ViewBuilder let row: (Item) -> Row

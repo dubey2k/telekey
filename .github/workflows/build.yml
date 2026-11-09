@@ -1,0 +1,18 @@
+# Builds Telekey and runs its checks on every push and pull request. The zip is kept as a build artifact.
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15  # Swift 6 compiler (Xcode 16)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (runs Tests/checks.swift first)
+        run: ./build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Telekey
+          path: dist/Telekey.zip

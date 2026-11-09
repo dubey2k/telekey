@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// A section that starts open and can be folded. Folded ids are remembered across launches.
+/// Starts open; folded ids are remembered across launches.
 struct Fold<Content: View>: View {
     let id: String, title: String, subtitle: String
-    @Binding var folded: String  // comma-separated ids
+    @Binding var folded: String  // comma-separated
     var onOpen: () -> Void = {}
     @ViewBuilder let content: Content
     var isOpen: Bool { !folded.split(separator: ",").contains(Substring(id)) }
@@ -30,7 +30,7 @@ struct Fold<Content: View>: View {
                 Rectangle().fill(Theme.line).frame(height: 1)
                 VStack(alignment: .leading, spacing: 12) { content }
                     .padding(14)
-                    .onAppear(perform: onOpen)  // load the section's data from the TV only once it's visible
+                    .onAppear(perform: onOpen)
             }
         }
         .plate()
@@ -65,7 +65,7 @@ struct TabBar: View {
     }
 }
 
-/// The surface you click to drive the TV: a dot-matrix plate whose dots light up while it has your input.
+/// Click to drive the TV. The dots light up while it has your input.
 struct ControlPad: View {
     @ObservedObject var remote: Remote
     @State private var tuning = false
@@ -93,7 +93,7 @@ struct ControlPad: View {
                 .font(.system(size: 12)).foregroundStyle(Theme.dim)
             }
             .padding(.horizontal, 18).padding(.vertical, 12)
-            .background(Theme.surface)  // a clean patch so the words sit above the dots
+            .background(Theme.surface)
         }
         .frame(maxWidth: .infinity).frame(height: 200)
         .background(Theme.surface)
@@ -152,7 +152,6 @@ struct StripKey: View {
     }
 }
 
-/// The remote's buttons as one strip, each with its shortcut printed under it.
 struct RemoteStrip: View {
     let remote: Remote, tv: TV
     var body: some View {
@@ -195,16 +194,16 @@ struct AppRow: View {
                 Text(ByteCountFormatter.string(fromByteCount: Int64(b), countStyle: .file)).font(.mono(11)).foregroundStyle(Theme.dim)
             }
             if gone {
-                Button("Restore") { tv.appAction(p, "restore") }.buttonStyle(.flat)
+                Button("Restore") { tv.appAction(p, .restore) }.buttonStyle(.flat)
             } else {
                 Menu {
-                    Button("Force stop") { tv.appAction(p, "stop") }
+                    Button("Force stop") { tv.appAction(p, .stop) }
                     if p.contains(protected) {
                         Text("Needed by the TV: can't be turned off or removed")
                     } else {
-                        Button("Clear data…") { tv.appAction(p, "clear") }
-                        Button(off ? "Turn on" : "Turn off") { tv.appAction(p, "toggle") }
-                        Button("Remove…", role: .destructive) { tv.appAction(p, "uninstall") }
+                        Button("Clear data…") { tv.appAction(p, .clear) }
+                        Button(off ? "Turn on" : "Turn off") { tv.appAction(p, .toggle) }
+                        Button("Remove…", role: .destructive) { tv.appAction(p, .remove) }
                     }
                 } label: { Image(systemName: "ellipsis") }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
@@ -221,17 +220,17 @@ struct SessionView: View {
     @ObservedObject var tv: TV
     @AppStorage("tab") private var tab = "send"
     @AppStorage("folded") private var folded = ""
-    func bind<T>(_ get: @escaping () -> T, _ set: @escaping (T) -> Void) -> Binding<T> { Binding(get: get, set: set) }
+    func bind<T>(_ get: @escaping @MainActor @Sendable () -> T, _ set: @escaping @MainActor @Sendable (T) -> Void) -> Binding<T> { Binding(get: get, set: set) }
 
     var body: some View {
         Page {
-            Header(title: model.tvName, status: "connected · \(serial.split(separator: ":").first ?? "")", live: true) {
+            Header(title: model.tvName, status: "connected · \(remote.ip)", live: true) {
                 Button("Disconnect") { model.back("") }.buttonStyle(.flat)
             }
             ControlPad(remote: remote)
             RemoteStrip(remote: remote, tv: tv)
             TabBar(tab: $tab)
-                .onAppear { if !TabBar.tabs.contains(where: { $0.0 == tab }) { tab = "send" } }  // tab names from older versions
+                .onAppear { if !TabBar.tabs.contains(where: { $0.0 == tab }) { tab = "send" } }
             switch tab {
             case "apps": apps
             case "ads": VStack(spacing: 12) { dns; screensaver }
@@ -271,7 +270,7 @@ struct SessionView: View {
     }
 
     var apps: some View {
-        Fold(id: "apps", title: "Apps", subtitle: tv.packages.isEmpty ? "every app on the TV" : "\(tv.shownPackages.count) shown", folded: $folded, onOpen: { tv.load("apps") }) {
+        Fold(id: "apps", title: "Apps", subtitle: tv.packages.isEmpty ? "every app on the TV" : "\(tv.shownPackages.count) shown", folded: $folded, onOpen: { tv.load(.apps) }) {
             Picker("", selection: $tv.filter) {
                 ForEach(["Bloat", "Yours", "System", "Off", "Removed", "All"], id: \.self) { Text($0).tag($0) }
             }
@@ -296,7 +295,7 @@ struct SessionView: View {
     }
 
     var dns: some View {
-        Fold(id: "ads", title: "Private DNS", subtitle: "blocks ad servers for the whole TV", folded: $folded, onOpen: { tv.load("ads") }) {
+        Fold(id: "ads", title: "Private DNS", subtitle: "blocks ad servers for the whole TV", folded: $folded, onOpen: { tv.load(.ads) }) {
             Picker("", selection: bind({ tv.dnsChoice }, tv.setDNS)) {
                 ForEach(dnsPresets, id: \.0) { Text($0.1).tag($0.0) }
             }
@@ -313,13 +312,13 @@ struct SessionView: View {
     }
 
     var screensaver: some View {
-        Fold(id: "screensaver", title: "Ambient mode", subtitle: "the screensaver, which often shows ads", folded: $folded, onOpen: { tv.load("ads") }) {
+        Fold(id: "screensaver", title: "Ambient mode", subtitle: "the screensaver, which often shows ads", folded: $folded, onOpen: { tv.load(.ads) }) {
             Toggle("Show ambient mode when the TV is idle", isOn: bind({ tv.screensaver }, tv.setScreensaver)).toggleStyle(.switch)
         }
     }
 
     var storage: some View {
-        Fold(id: "storage", title: "Storage", subtitle: tv.storage, folded: $folded, onOpen: { tv.load("storage") }) {
+        Fold(id: "storage", title: "Storage", subtitle: tv.storage, folded: $folded, onOpen: { tv.load(.storage) }) {
             HStack {
                 Button("Clear caches") { tv.clearCaches() }.buttonStyle(.flat)
                 Button("Show biggest apps") { tv.loadBigApps() }.buttonStyle(.flat)
@@ -335,7 +334,7 @@ struct SessionView: View {
     }
 
     var animations: some View {
-        Fold(id: "speed", title: "Animations", subtitle: "faster menus", folded: $folded, onOpen: { tv.load("speed") }) {
+        Fold(id: "speed", title: "Animations", subtitle: "faster menus", folded: $folded, onOpen: { tv.load(.speed) }) {
             Picker("", selection: bind({ tv.anim }, tv.setAnim)) {
                 Text("Off").tag("0"); Text("Fast").tag("0.5"); Text("Normal").tag("1")
             }
@@ -344,7 +343,7 @@ struct SessionView: View {
     }
 
     var about: some View {
-        Fold(id: "tv", title: "About & power", subtitle: "", folded: $folded, onOpen: { tv.load("tv") }) {
+        Fold(id: "tv", title: "About & power", subtitle: "", folded: $folded, onOpen: { tv.load(.about) }) {
             Text(tv.info).font(.mono(11)).foregroundStyle(Theme.dim).textSelection(.enabled)
             HStack {
                 Button("Sleep") { remote.key(kSleep) }.buttonStyle(.flat)

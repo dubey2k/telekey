@@ -18,7 +18,7 @@ struct RootView: View {
         .animation(.easeOut(duration: 0.2), value: model.screen)
         .preferredColorScheme(.dark)
         .tint(Theme.accent)
-        .focusEffectDisabled()  // the system focus ring is the Mac's accent colour (often purple), off-palette here
+        .focusEffectDisabled()  // the system ring uses the Mac's accent colour
         .task { await model.start() }
     }
 }
@@ -104,7 +104,7 @@ struct ListView: View {
                 Button("Connect") { model.addByIP(ip) }.buttonStyle(.flat).disabled(ip.isEmpty)
             }
         }
-        .task {  // keeps the list fresh while it's on screen (and reconnects a TV that comes back)
+        .task {  // also reconnects a TV that comes back
             while !Task.isCancelled {
                 await model.refresh()
                 try? await Task.sleep(for: .seconds(5))
@@ -112,9 +112,11 @@ struct ListView: View {
         }
     }
 
+    private static let ago = RelativeDateTimeFormatter()
+
     func lastUsed(_ tv: Found) -> String {
         guard let d = Configs.load(tv.ip)?.lastConnected else { return tv.ip }
-        return "\(tv.ip) · used \(RelativeDateTimeFormatter().localizedString(for: d, relativeTo: Date()))"
+        return "\(tv.ip) · used \(Self.ago.localizedString(for: d, relativeTo: Date()))"
     }
 
     func setupSteps(_ tv: Found) -> some View {

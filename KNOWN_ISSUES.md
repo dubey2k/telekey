@@ -1,28 +1,54 @@
-# Known issues in the code
+# Known issues
 
-Found in a review before the first release. Each line says where, what goes wrong, and the fix we'd take. Pick one, open a PR.
+Open problems in the code. Each one says where it is, what goes wrong, and the fix we'd accept. Pick one and open a PR. [CONTRIBUTING.md](CONTRIBUTING.md) explains how to build.
 
-## Worth fixing first
+For problems you might hit as a user, see [Good to know](README.md#good-to-know) in the README.
 
-- **One global `serial` for TV jobs** (`Shell.swift`, `TV.swift`). A slow job for TV A (Remove all, Clear caches) that's still running when you switch to TV B finishes on TV B. `Link` already keeps its own; `TV` should too.
-- **Port 5555 should be a setting** (`Model.connect`, `adb tcpip 5555`). It's announced while connecting and only approved devices can use it, but people on shared Wi-Fi may want it off.
-- **adb calls aren't cancelled with their task** (`run()`). They time out after 20 s, but leaving a screen doesn't stop them sooner.
+## Open
 
-## Smaller
+- [ ] **Port 5555 should be a setting.** `Model.connecting`
+  After a Wireless-debugging connect, Telekey runs `adb tcpip 5555` so the TV stays reachable through sleep. It says so while connecting, and only approved devices can use the port, but people on shared Wi-Fi may want it off. Add a per-TV toggle in `TVConfig`.
+- [ ] **Protected apps are matched by name.** `protected` in `Bloat.swift`
+  Good enough for TCL and Google TV. Other brands may have essential apps it doesn't recognise. A per-brand list would be safer.
+- [ ] **US keyboard layout only.** `hidUsage` in `Remote.swift`
+  Keys are sent by physical position, and Android applies the TV's layout. Other Mac layouts type some symbols wrong.
+- [ ] **Scrolling snaps back in Leanback and Compose-for-TV apps.** `Remote.scroll`
+  These apps pull the list back to the focused row, and mouse-wheel events can't change that. Sending touch swipes at the pointer position (what MATVT does) might.
 
-- **Back during pairing doesn't cancel it** (`Model.pair`). If `adb pair` succeeds afterwards, the app jumps to connecting.
-- **Cast discovery tries each TV once** (`CastBrowser.resolve`). A failed or IPv6-only first attempt means the TV only shows up via adb until restart. Force IPv4 and retry on failure.
-- **stdout and stderr share one pipe** (`run()`). An adb warning on stderr corrupts a screenshot PNG or the forwarded port number. Read them separately.
-- **Failed loads are cached** (`TV.load`). If the first adb call for a section fails, it's never retried, and error text can end up shown as data or saved as the TV's name.
-- **Settings recorded but never re-applied** (`TVConfig.privateDNS`, `screensaver`, `animations`, `turnedOffApps`, `removedApps`). Either restore them on a factory-reset TV, or drop them.
-- **Config writes aren't ordered** (`Configs.save`). They run on a concurrent queue; use a serial one and `sync` on flush.
-- **Writes to the control socket are blocking and unchecked** (`Link.send`). Partial writes are ignored and a stalled adb freezes the UI.
-- **⌘Q does nothing while controlling the TV.** Every key goes to the TV until ⌘ is pressed alone. Let ⌘Q through.
-- **Swift 6 mode doesn't build.** `Link` is `@unchecked Sendable` with unguarded fields; `act()` closures aren't `@MainActor`. Builds in Swift 5 mode today.
-- **Protected apps are matched by name** (`protected` in `TV.swift`). Good enough for TCL and Google TV; other brands may have essentials it doesn't recognise.
-- **Keyboard is US layout** (`hidUsage` in `Remote.swift`).
-- **Scrolling in Leanback/Compose-for-TV apps snaps back** to the focused row. Mouse-wheel events can't fix it; synthetic touch swipes at the pointer (what MATVT does) might.
+<details>
+<summary><b>Fixed before 1.0</b></summary>
+<br>
 
-## Fixed before release
+**From the production review**
 
-Double close of the control socket after a disconnect; shortcuts still sent to a closed session; an unreadable `tvs.json` being overwritten (now kept as `tvs.json.unreadable`); the user's own apps suggested as bloat; a crash with Caps Lock and six keys held; clear-data and remove reachable on protected apps; custom DNS losing its field; pasted text cut mid-character; endless reconnect when a session dies within seconds; sleeping TVs sent to the pairing screen; adb calls that could hang forever (now time out); tunnel cleanup blocking the window; adb restarted without asking (Telekey now runs its own adb server on port 5038, so it never touches other tools' adb); port 5555 opened silently with no fallback; the per-app scroll-by-rows option (removed, it didn't help).
+- TV jobs used one global adb serial, so a slow job could finish on a different TV. Each session now owns its device.
+- stdout and stderr shared one pipe, so an adb warning could corrupt a screenshot. They're read separately, and the exit status is checked.
+- adb calls kept running after you left a screen. Cancel and Back now kill them, including a pairing in progress.
+- adb's server was started twice at launch. The second copy aborted and left a crash report every time Telekey opened. Scans now wait for one server start.
+- A failed load was cached, and adb's error text could show as data or become the TV's name. Failures now retry the next time the section opens.
+- Settings were saved to `tvs.json` but never used. They're gone.
+- Config writes could land out of order. They now go through one serial queue.
+- Writes to the control socket could block the window and ignored partial writes. They now loop, time out after 1 s, and end the session on failure.
+- ⌘Q did nothing while controlling the TV.
+- Cast discovery gave up on a TV after one failed or IPv6-only attempt. It now forces IPv4 and retries.
+- Scanning probed TVs one at a time. They're now probed all at once.
+- The code didn't build in Swift 6 mode. It now builds in Swift 6 mode with no warnings, so data races are compile errors.
+
+**Earlier**
+
+- Control socket closed twice after a disconnect
+- Shortcuts sent to a closed session
+- An unreadable `tvs.json` overwritten (it's now kept as `tvs.json.unreadable`)
+- Your own apps suggested as bloat
+- A crash with Caps Lock and six keys held
+- Clear data and Remove reachable on protected apps
+- Custom DNS losing its text field
+- Pasted text cut in the middle of a character
+- Endless reconnects when a session died within seconds
+- Sleeping TVs sent to the pairing screen
+- adb calls that could hang forever (they now time out)
+- adb restarted without asking (Telekey now runs its own adb server on port 5038)
+- Port 5555 opened silently, with no fallback
+- The per-app scroll-by-rows option (removed, it didn't help)
+
+</details>

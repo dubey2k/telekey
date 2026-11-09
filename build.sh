@@ -24,8 +24,13 @@ ok "$ADB_SHA" vendor/adb || { echo "vendor/adb doesn't match the pinned hash" >&
 
 APP=build/Telekey.app
 rm -rf build && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+SDK="$(xcrun --show-sdk-path)"  # explicit SDK: stray headers in /usr/local/include otherwise break the build
+
+# checks first (Tests/checks.swift): a broken command runner would break everything else
+swiftc -sdk "$SDK" -parse-as-library -swift-version 6 Sources/Shell.swift Tests/checks.swift -o build/checks
+build/checks
 for arch in arm64 x86_64; do
-  swiftc -sdk "$(xcrun --show-sdk-path)" -target "$arch-apple-macos14" -parse-as-library -O \
+  swiftc -sdk "$SDK" -target "$arch-apple-macos14" -parse-as-library -swift-version 6 -O \
     Sources/*.swift Sources/UI/*.swift -o "build/Telekey-$arch"
 done
 lipo -create build/Telekey-arm64 build/Telekey-x86_64 -output "$APP/Contents/MacOS/Telekey"
